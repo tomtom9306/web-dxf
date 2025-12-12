@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Universal DXF Viewer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1224;
+        --panel: #0f172a;
+        --muted: #94a3b8;
+        --border: #1e293b;
+        --accent: #38bdf8;
+        --accent-2: #a78bfa;
+        --accent-3: #fbbf24;
+        --accent-4: #f472b6;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+          sans-serif;
+        background: var(--bg);
+        color: #e2e8f0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      p {
+        margin: 0;
+      }
+
+      header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        background: #0d152a;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+
+      .branding {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+
+      .branding > span {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 48px;
+        height: 48px;
+        border-radius: 0.75rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: #0b1224;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+      }
+
+      .branding h1 {
+        font-size: 1.3rem;
+      }
+
+      .branding small {
+        color: var(--muted);
+      }
+
+      .controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      .button,
+      .label-button {
+        appearance: none;
+        border: 1px solid var(--border);
+        background: #11182b;
+        color: #e2e8f0;
+        padding: 0.65rem 0.9rem;
+        border-radius: 0.6rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        transition: border-color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+      }
+
+      .button.secondary,
+      .label-button.secondary {
+        background: transparent;
+      }
+
+      .button:hover,
+      .label-button:hover {
+        border-color: var(--accent);
+        transform: translateY(-1px);
+      }
+
+      .label-button input[type='file'] {
+        display: none;
+      }
+
+      main {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1rem;
+        padding: 1rem;
+        flex: 1;
+        min-height: 0;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+        min-width: 0;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 0.9rem;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        min-height: 0;
+      }
+
+      .panel h2 {
+        font-size: 1rem;
+        color: #cbd5e1;
+      }
+
+      .status {
+        display: grid;
+        gap: 0.35rem;
+        color: var(--muted);
+      }
+
+      .badge {
+        background: rgba(56, 189, 248, 0.15);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 0.35rem 0.75rem;
+        display: inline-flex;
+        width: fit-content;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+      }
+
+      .entity-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        overflow: auto;
+        max-height: 220px;
+      }
+
+      .entity-item {
+        display: flex;
+        justify-content: space-between;
+        background: #11182b;
+        border: 1px solid var(--border);
+        border-radius: 0.65rem;
+        padding: 0.5rem 0.65rem;
+        font-size: 0.95rem;
+      }
+
+      .entity-type {
+        color: #e2e8f0;
+        font-weight: 600;
+      }
+
+      .entity-meta {
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+
+      .viewer-wrapper {
+        position: relative;
+        background: #0d1428;
+        border: 1px solid var(--border);
+        border-radius: 1rem;
+        overflow: hidden;
+        min-height: 520px;
+      }
+
+      .viewer-wrapper p.placeholder {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        text-align: center;
+        padding: 1rem;
+        pointer-events: none;
+      }
+
+      ul {
+        padding-left: 1.1rem;
+        margin: 0;
+        color: var(--muted);
+      }
+
+      ul li + li {
+        margin-top: 0.35rem;
+      }
+
+      @media (max-width: 960px) {
+        main {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 640px) {
+        header {
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="branding">
+        <span>DXF</span>
+        <div>
+          <h1>Universal DXF Viewer</h1>
+          <small>Open DXF files locally—no installs needed.</small>
+        </div>
+      </div>
+      <div class="controls">
+        <label class="label-button" id="fileLabel">
+          <input id="fileInput" type="file" accept=".dxf" />
+          <span aria-hidden="true">⬆️</span>
+          Choose DXF
+        </label>
+        <button class="button secondary" id="recenterBtn" type="button">Recenter view</button>
+      </div>
+    </header>
+
+    <main>
+      <aside class="sidebar">
+        <section class="panel">
+          <h2>File details</h2>
+          <div class="status" id="statusBox">
+            <p>Drop a DXF file or choose one to start.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Entity breakdown</h2>
+          <div class="entity-list" id="entityList">
+            <p style="color: var(--muted);">Load a DXF to inspect entities.</p>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Usage</h2>
+          <ul>
+            <li>Supports ASCII and binary DXF variants.</li>
+            <li>Drag &amp; drop or use the chooser to open files.</li>
+            <li>Lines, polylines, circles, and arcs render automatically.</li>
+          </ul>
+        </section>
+      </aside>
+
+      <section class="viewer-wrapper" id="viewer" aria-label="DXF preview canvas">
+        <p class="placeholder" id="placeholder">Drop a DXF file here or use the chooser.</p>
+      </section>
+    </main>
+
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="https://unpkg.com/dxf-parser@1.5.0/dist/dxf-parser.js"></script>
+    <script>
+      const formatter = new Intl.NumberFormat();
+      const arcSegmentCount = 32;
+
+      const viewer = document.getElementById('viewer');
+      const statusBox = document.getElementById('statusBox');
+      const entityList = document.getElementById('entityList');
+      const placeholder = document.getElementById('placeholder');
+      const recenterBtn = document.getElementById('recenterBtn');
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      renderer.setClearColor(0x0b1224, 1);
+      viewer.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.OrthographicCamera();
+      camera.position.set(0, 0, 1000);
+      camera.up.set(0, 1, 0);
+      camera.lookAt(0, 0, 0);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+      scene.add(ambient);
+      const axesHelper = new THREE.AxesHelper(50);
+      scene.add(axesHelper);
+
+      const parser = new DxfParser();
+      let boundingBox = null;
+
+      const resizeRenderer = () => {
+        const { clientWidth, clientHeight } = viewer;
+        renderer.setSize(clientWidth, clientHeight);
+        const aspect = clientWidth / clientHeight;
+        const viewSize = camera.top - camera.bottom || 200;
+        const halfHeight = viewSize / 2;
+        camera.left = -halfHeight * aspect;
+        camera.right = halfHeight * aspect;
+        camera.updateProjectionMatrix();
+      };
+
+      const buildGeometry = (entity) => {
+        switch (entity.type) {
+          case 'LINE': {
+            const points = [
+              new THREE.Vector3(entity.start.x, entity.start.y, entity.start.z || 0),
+              new THREE.Vector3(entity.end.x, entity.end.y, entity.end.z || 0),
+            ];
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x7dd3fc }));
+          }
+          case 'LWPOLYLINE': {
+            const points = (entity.vertices || []).map(
+              (vertex) => new THREE.Vector3(vertex.x, vertex.y, vertex.z || 0),
+            );
+            if (entity.shape || entity.closed) {
+              const first = points[0];
+              if (first) points.push(first.clone());
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x818cf8 }));
+          }
+          case 'POLYLINE': {
+            const points = (entity.vertices || []).map(
+              (vertex) => new THREE.Vector3(vertex.x, vertex.y, vertex.z || 0),
+            );
+            if (entity.shape || entity.closed) {
+              const first = points[0];
+              if (first) points.push(first.clone());
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0x22d3ee }));
+          }
+          case 'CIRCLE': {
+            const segments = 64;
+            const geometry = new THREE.CircleGeometry(entity.radius, segments);
+            geometry.translate(entity.center.x, entity.center.y, entity.center.z || 0);
+            const edges = new THREE.EdgesGeometry(geometry);
+            return new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0xfbbf24 }));
+          }
+          case 'ARC': {
+            const start = THREE.MathUtils.degToRad(entity.startAngle);
+            const end = THREE.MathUtils.degToRad(entity.endAngle);
+            const points = [];
+            const delta = (end - start) / arcSegmentCount;
+            for (let i = 0; i <= arcSegmentCount; i += 1) {
+              const angle = start + delta * i;
+              points.push(
+                new THREE.Vector3(
+                  entity.center.x + entity.radius * Math.cos(angle),
+                  entity.center.y + entity.radius * Math.sin(angle),
+                  entity.center.z || 0,
+                ),
+              );
+            }
+            const geometry = new THREE.BufferGeometry().setFromPoints(points);
+            return new THREE.Line(geometry, new THREE.LineBasicMaterial({ color: 0xf472b6 }));
+          }
+          default:
+            return null;
+        }
+      };
+
+      const summarizeEntities = (entities) => {
+        const map = new Map();
+        entities.forEach((entity) => {
+          const type = entity.type || 'UNKNOWN';
+          map.set(type, (map.get(type) || 0) + 1);
+        });
+        return Array.from(map.entries())
+          .map(([type, count]) => ({ type, count }))
+          .sort((a, b) => b.count - a.count);
+      };
+
+      const renderEntities = (entities) => {
+        const group = new THREE.Group();
+        const bbox = new THREE.Box3();
+
+        entities.forEach((entity) => {
+          const object = buildGeometry(entity);
+          if (object) {
+            group.add(object);
+            bbox.expandByObject(object);
+          }
+        });
+
+        if (group.children.length === 0) {
+          setStatus('No drawable entities found in this DXF.');
+          return null;
+        }
+
+        scene.add(group);
+        boundingBox = bbox;
+        focusCameraOnBox(bbox);
+        placeholder?.remove();
+        return bbox;
+      };
+
+      const formatExtents = (box) => {
+        if (!box) return 'Not available';
+        const size = new THREE.Vector3();
+        box.getSize(size);
+        return `${size.x.toFixed(2)} x ${size.y.toFixed(2)} (model units)`;
+      };
+
+      const focusCameraOnBox = (box) => {
+        if (!box) return;
+        const { clientWidth, clientHeight } = viewer;
+        const aspect = clientWidth / clientHeight;
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
+
+        const viewHeight = Math.max(size.y * 1.2, (size.x * 1.2) / aspect, 100);
+        const halfHeight = viewHeight / 2;
+
+        camera.left = -halfHeight * aspect;
+        camera.right = halfHeight * aspect;
+        camera.top = halfHeight;
+        camera.bottom = -halfHeight;
+        camera.position.set(center.x, center.y, 1000);
+        camera.lookAt(center);
+        camera.updateProjectionMatrix();
+      };
+
+      const clearScene = () => {
+        for (let i = scene.children.length - 1; i >= 0; i -= 1) {
+          const child = scene.children[i];
+          if (child !== ambient && child !== axesHelper) {
+            scene.remove(child);
+          }
+        }
+      };
+
+      const setStatus = (text) => {
+        statusBox.innerHTML = `<p>${text}</p>`;
+      };
+
+      const updateMetadata = (meta) => {
+        statusBox.innerHTML = `
+          <span class="badge"><strong>${meta.name}</strong></span>
+          <span>Version: <strong>${meta.version ?? 'Unknown'}</strong></span>
+          <span>Entities: <strong>${formatter.format(meta.totalEntities)}</strong></span>
+          <span>Extents: <strong>${formatExtents(boundingBox)}</strong></span>
+        `;
+
+        entityList.innerHTML = '';
+        if (meta.summaries.length === 0) {
+          entityList.innerHTML = '<p style="color: var(--muted);">No drawable entities found.</p>';
+          return;
+        }
+
+        meta.summaries.forEach((summary) => {
+          const row = document.createElement('div');
+          row.className = 'entity-item';
+          row.innerHTML = `
+            <span class="entity-type">${summary.type}</span>
+            <span class="entity-meta">${formatter.format(summary.count)}</span>
+          `;
+          entityList.appendChild(row);
+        });
+      };
+
+      const handleDxf = (file) => {
+        setStatus(`Loading ${file.name}...`);
+        const reader = new FileReader();
+        reader.onload = () => {
+          try {
+            const buffer = reader.result;
+            const text = new TextDecoder().decode(buffer);
+            const dxf = parser.parseSync(text);
+            const entities = dxf.entities || [];
+            const summaries = summarizeEntities(entities);
+            const version = dxf.header?.$ACADVER;
+
+            clearScene();
+            const bbox = renderEntities(entities);
+            if (!bbox) return;
+
+            updateMetadata({
+              name: file.name,
+              version: version ? String(version) : undefined,
+              totalEntities: entities.length,
+              summaries,
+            });
+          } catch (error) {
+            console.error(error);
+            setStatus('Unable to parse DXF. Ensure the file is valid.');
+          }
+        };
+        reader.readAsArrayBuffer(file);
+      };
+
+      const handleDrop = (event) => {
+        event.preventDefault();
+        const [file] = Array.from(event.dataTransfer.files);
+        if (file) handleDxf(file);
+      };
+
+      const handleDragOver = (event) => {
+        event.preventDefault();
+      };
+
+      document.getElementById('fileInput').addEventListener('change', (event) => {
+        const [file] = event.target.files || [];
+        if (file) handleDxf(file);
+      });
+
+      viewer.addEventListener('drop', handleDrop);
+      viewer.addEventListener('dragover', handleDragOver);
+
+      recenterBtn.addEventListener('click', () => {
+        if (!boundingBox) return;
+        focusCameraOnBox(boundingBox);
+      });
+
+      window.addEventListener('resize', resizeRenderer);
+      resizeRenderer();
+
+      const renderLoop = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(renderLoop);
+      };
+      renderLoop();
+    </script>
+  </body>
+</html>
